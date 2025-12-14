@@ -1,0 +1,32 @@
+<!DOCTYPE html SYSTEM "http://www.thymeleaf.org/dtd/xhtml1-strict-thymeleaf-4.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:th="http://www.thymeleaf.org">
+
+<head>
+<meta charset="UTF-8">
+<title>Insert title here</title>
+</head>
+<body>
+<h1>Albums page</h1>
+
+                <div th:if="${albums.empty}">
+                    <div>No albums found</div>
+                </div>
+                
+                <div th:each="album : ${albums}">
+                    <p><span th:text="${album.albumTitle}"></span></p>
+                </div>
+
+<!-- Logout form (POST) using CSRF token -->
+<form th:action="@{/logout}" method="post" style="display:inline">
+    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+    <button type="submit">Logout</button>
+</form>
+
+<!-- Optional GET logout link (works only if GET logout is enabled) -->
+<a th:href="@{/logout}" style="margin-left:8px">Logout (GET)</a>
+
+			
+
+</body>
+</html>
