@@ -1,53 +1,60 @@
 package com.appsdeveloperblog.ws.api.ResourceServer.security;
 
-import java.util.Arrays;
-
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
+import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.security.web.SecurityFilterChain;
 
-@EnableGlobalMethodSecurity(securedEnabled=true, prePostEnabled=true)
+@Configuration
 @EnableWebSecurity
-public class WebSecurity extends WebSecurityConfigurerAdapter {
+@EnableMethodSecurity(prePostEnabled = true)
+public class WebSecurity {
+
+	private static final String[] WHITE_LIST_URL = { "/api/v1/auth/**", "/v2/api-docs", "/v3/api-docs",
+			"/v3/api-docs/**", "/swagger-resources", "/swagger-resources/**", "/configuration/ui",
+			"/configuration/security", "/swagger-ui/**", "/webjars/**", "/swagger-ui.html", "/api/auth/**",
+			"/api/test/**", "/authenticate" };
 	
-	@Override
-	protected void configure(HttpSecurity http) throws Exception {
-		
+    @Bean
+    SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+
 		JwtAuthenticationConverter jwtAuthenticationConverter = new JwtAuthenticationConverter();
 		jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(new KeycloakRoleConverter());
-	 
-		http.cors().and()
-			.authorizeRequests()
-					.antMatchers(HttpMethod.GET, "/users/status/check") 
-					//.hasAuthority("SCOPE_profile")
-					.hasRole("developer")
-					//.hasAnyAuthority("ROLE_developer")
-					//.hasAnyRole("devleoper","user")
-				.anyRequest().authenticated()
-				.and()
-			.oauth2ResourceServer()
-			.jwt()
-			.jwtAuthenticationConverter(jwtAuthenticationConverter);
+
+		http.authorizeHttpRequests(authz -> authz
+				// .antMatchers(HttpMethod.GET, "/test").hasAnyAuthority("ROLE_USER")
+				// .antMatchers(HttpMethod.GET, "/test").hasAnyAuthority("ROLE_user")
+				.requestMatchers(WHITE_LIST_URL).permitAll()
+				.requestMatchers(HttpMethod.GET, "/users/status/check") 
+				.hasRole("developer")
+				.anyRequest().authenticated()).oauth2ResourceServer(
+						oauth2 -> oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter)));
+
+
+		return http.build();
 	}
-	
-	@Bean
-	CorsConfigurationSource corsConfigurationSource() {
-		CorsConfiguration corsConfiguration = new CorsConfiguration();
-		corsConfiguration.setAllowedOrigins(Arrays.asList("*"));
-		corsConfiguration.setAllowedMethods(Arrays.asList("GET","POST"));
-		corsConfiguration.setAllowedHeaders(Arrays.asList("*"));
-		
-		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-		source.registerCorsConfiguration("/**", corsConfiguration);
-		
-		return source;
-	}
+
+    @Bean
+    WebSecurityCustomizer webSecurityCustomizer() {
+        return (web) -> web.ignoring()
+          .requestMatchers(WHITE_LIST_URL);
+    }
 	
 }
+
+//	private JwtAuthenticationConverter jwtAuthenticationConverter() {
+//	    // create a custom JWT converter to map the "roles" from the token as granted authorities
+//	    JwtGrantedAuthoritiesConverter jwtGrantedAuthoritiesConverter = new JwtGrantedAuthoritiesConverter();
+//	    jwtGrantedAuthoritiesConverter.setAuthoritiesClaimName("roles");
+//	    jwtGrantedAuthoritiesConverter.setAuthorityPrefix("ROLE_");
+//	    JwtAuthenticationConverter jwtAuthenticationConverter = new JwtAuthenticationConverter();
+//	    jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(jwtGrantedAuthoritiesConverter);
+//	    return jwtAuthenticationConverter;
+//	  }
